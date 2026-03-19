@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	ghcontext "github.com/github/github-mcp-server/pkg/context"
 	"github.com/github/github-mcp-server/pkg/http/oauth"
@@ -25,14 +26,20 @@ func ExtractUserToken(oauthCfg *oauth.Config) func(next http.Handler) http.Handl
 
 			tokenType, token, err := utils.ParseAuthorizationHeader(r)
 			if err != nil {
-				// For missing Authorization header, return 401 with WWW-Authenticate header per MCP spec
+				// For missing Authorization header, fall back to GITHUB_PERSONAL_ACCESS_TOKEN env var
 				if errors.Is(err, utils.ErrMissingAuthorizationHeader) {
-					sendAuthChallenge(w, r, oauthCfg)
+					envToken := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+					if envToken != "" {
+						tokenType, token = utils.ClassifyToken(envToken)
+					} else {
+						sendAuthChallenge(w, r, oauthCfg)
+						return
+					}
+				} else {
+					// For other auth errors (bad format, unsupported), return 400
+					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				// For other auth errors (bad format, unsupported), return 400
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
 			}
 
 			ctx = ghcontext.WithTokenInfo(ctx, &ghcontext.TokenInfo{

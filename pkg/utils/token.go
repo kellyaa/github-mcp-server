@@ -73,3 +73,18 @@ func ParseAuthorizationHeader(req *http.Request) (tokenType TokenType, token str
 
 	return 0, "", ErrBadAuthorizationHeader
 }
+
+// ClassifyToken determines the TokenType for a raw token string.
+func ClassifyToken(token string) (TokenType, string) {
+	for prefix, tokenType := range supportedGitHubPrefixes {
+		if strings.HasPrefix(token, prefix) {
+			return tokenType, token
+		}
+	}
+
+	if oldPatternRegexp.MatchString(token) {
+		return TokenTypePersonalAccessToken, token
+	}
+
+	return TokenTypeUnknown, token
+}
