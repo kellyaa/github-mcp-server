@@ -1,4 +1,4 @@
-FROM ghcr.io/github/github-mcp-server:latest AS ui-build
+FROM quay.io/sclorg/nodejs-20-minimal-c9s:latest AS ui-build
 WORKDIR /app
 COPY ui/package*.json ./ui/
 RUN cd ui && npm ci
@@ -7,7 +7,7 @@ COPY ui/ ./ui/
 RUN mkdir -p ./pkg/github/ui_dist && \
     cd ui && npm run build
 
-FROM ghcr.io/github/github-mcp-server:latest AS build
+FROM quay.io/projectquay/golang:1.25 AS build
 ARG VERSION="dev"
 
 # Set the working directory
